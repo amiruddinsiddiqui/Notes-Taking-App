@@ -1,45 +1,61 @@
 package com.amir.notestakingapp.controller;
 
 import com.amir.notestakingapp.entity.NoteEntry;
+import com.amir.notestakingapp.service.NoteEntryService;
+import org.bson.types.ObjectId;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 
 
 @RestController
 @RequestMapping("/note")
 public class NoteController {
+    //controller ---> service ---> repository
 
-    Map<String, NoteEntry> noteEntryMap = new HashMap<>();
+    @Autowired
+    private NoteEntryService noteEntryService;
 
-    @GetMapping("/get")
+    @GetMapping("/getnote")
     public List<NoteEntry> getAll(){
-        return new ArrayList<>(noteEntryMap.values());
+        if ((noteEntryService.getAllNote() != null) && !noteEntryService.getAllNote().isEmpty()){
+            return noteEntryService.getAllNote();
+        }
+        return new ArrayList<>();
     }
 
-    @PostMapping("/post")
+    @PostMapping("/postnote")
     public NoteEntry createEntries(@RequestBody NoteEntry noteEntry){
-        noteEntryMap.put(noteEntry.getId(), noteEntry);
+        noteEntry.setLocalDateTime(LocalDateTime.now());
+        noteEntryService.saveNote(noteEntry);
         return noteEntry;
     }
 
-    @GetMapping("/getbyid/{myid}")
-    public NoteEntry getbyid(@PathVariable String myid){
-        return  noteEntryMap.get(myid);
+    @GetMapping("/getbyid/{id}")
+    public NoteEntry getbyid(@PathVariable ObjectId id){
+        return noteEntryService.getNoteById(id).orElse(null);
     }
 
-    @DeleteMapping("/delbyid/{myId}")
-    public boolean deleteById(@PathVariable String myId){
-        noteEntryMap.remove(myId);
-        return true;
+
+    @DeleteMapping("/delbyid/{id}")
+    public boolean deleteById(@PathVariable ObjectId id){
+        if(id != null && !id.equals("")){
+            noteEntryService.deleteById(id);
+            return true;
+        }
+        return false;
     }
 
     @PutMapping("/update/{id}")
-    public NoteEntry updateEntryById(@PathVariable String id, @RequestBody NoteEntry myUpdatedEntry){
-        noteEntryMap.put(myUpdatedEntry.getId(), myUpdatedEntry);
-        return myUpdatedEntry;
+    public NoteEntry updateEntryById(@PathVariable ObjectId id, @RequestBody NoteEntry updateEntry){
+        NoteEntry isNote = noteEntryService.getNoteById(id).orElse(null);
+        if (isNote != null){
+            isNote.setTitle(!(updateEntry.getTitle() == null) && !updateEntry.getTitle().isEmpty() ? updateEntry.getTitle() : isNote.getTitle());
+            isNote.setContent(!(updateEntry.getContent() == null) && !updateEntry.getContent().isEmpty() ? updateEntry.getContent() : isNote.getContent());
+        }
+        noteEntryService.saveNote(isNote);
+        return isNote;
     }
 }

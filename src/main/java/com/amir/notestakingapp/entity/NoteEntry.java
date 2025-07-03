@@ -1,18 +1,33 @@
 package com.amir.notestakingapp.entity;
 
-import org.springframework.web.bind.annotation.RestController;
 
-@RestController
+import org.bson.types.ObjectId;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.mapping.Document;
+
+import java.time.LocalDateTime;
+
+@Document(collection = "note_entries")
 public class NoteEntry {
-    private String id;
+    @Id
+    private ObjectId id;
     private String title;
     private String content;
+    private LocalDateTime createdAt;
 
-    public String getId() {
+    public LocalDateTime getLocalDateTime() {
+        return createdAt;
+    }
+
+    public void setLocalDateTime(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public ObjectId getId() {
         return id;
     }
 
-    public void setId(String id) {
+    public void setId(ObjectId id) {
         this.id = id;
     }
 
