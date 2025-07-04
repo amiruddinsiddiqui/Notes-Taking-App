@@ -34,7 +34,7 @@ public class NoteController {
     @PostMapping("/postnote")
     public ResponseEntity<NoteEntry> createEntries(@RequestBody NoteEntry noteEntry){
         try {
-            noteEntry.setLocalDateTime(LocalDateTime.now());
+            noteEntry.setCreatedAt(LocalDateTime.now());
             noteEntryService.saveNote(noteEntry);
             return new ResponseEntity<>(noteEntry, HttpStatus.CREATED);
         }
