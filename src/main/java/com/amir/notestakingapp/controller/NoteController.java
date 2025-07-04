@@ -4,6 +4,8 @@ import com.amir.notestakingapp.entity.NoteEntry;
 import com.amir.notestakingapp.service.NoteEntryService;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -19,43 +21,57 @@ public class NoteController {
     private NoteEntryService noteEntryService;
 
     @GetMapping("/getnote")
-    public List<NoteEntry> getAll(){
-        if ((noteEntryService.getAllNote() != null) && !noteEntryService.getAllNote().isEmpty()){
-            return noteEntryService.getAllNote();
+//    public ResponseEntity<?> getAll() ////wildcard
+    //or
+    public ResponseEntity<List<NoteEntry>> getAll(){
+        List<NoteEntry> allNotes = noteEntryService.getAllNote();
+        if ((allNotes != null) && !allNotes.isEmpty()){
+            return new ResponseEntity<>(noteEntryService.getAllNote(), HttpStatus.OK);
         }
-        return new ArrayList<>();
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     @PostMapping("/postnote")
-    public NoteEntry createEntries(@RequestBody NoteEntry noteEntry){
-        noteEntry.setLocalDateTime(LocalDateTime.now());
-        noteEntryService.saveNote(noteEntry);
-        return noteEntry;
+    public ResponseEntity<NoteEntry> createEntries(@RequestBody NoteEntry noteEntry){
+        try {
+            noteEntry.setLocalDateTime(LocalDateTime.now());
+            noteEntryService.saveNote(noteEntry);
+            return new ResponseEntity<>(noteEntry, HttpStatus.CREATED);
+        }
+        catch (Exception e){
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
+        }
     }
 
     @GetMapping("/getbyid/{id}")
-    public NoteEntry getbyid(@PathVariable ObjectId id){
-        return noteEntryService.getNoteById(id).orElse(null);
+    public ResponseEntity<NoteEntry> getbyid(@PathVariable ObjectId id){
+        Optional<NoteEntry> note = noteEntryService.getNoteById(id);
+        if (note.isPresent()){
+            return new ResponseEntity<>(note.get(), HttpStatus.OK);
+        }
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
 
     @DeleteMapping("/delbyid/{id}")
-    public boolean deleteById(@PathVariable ObjectId id){
-        if(id != null && !id.equals("")){
+    public ResponseEntity<?> deleteById(@PathVariable ObjectId id){
+        Optional<NoteEntry> note = noteEntryService.getNoteById(id);
+        if (note.isPresent()){
             noteEntryService.deleteById(id);
-            return true;
+            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
-        return false;
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
     @PutMapping("/update/{id}")
-    public NoteEntry updateEntryById(@PathVariable ObjectId id, @RequestBody NoteEntry updateEntry){
+    public ResponseEntity<NoteEntry> updateEntryById(@PathVariable ObjectId id, @RequestBody NoteEntry updateEntry){
         NoteEntry isNote = noteEntryService.getNoteById(id).orElse(null);
         if (isNote != null){
             isNote.setTitle(!(updateEntry.getTitle() == null) && !updateEntry.getTitle().isEmpty() ? updateEntry.getTitle() : isNote.getTitle());
             isNote.setContent(!(updateEntry.getContent() == null) && !updateEntry.getContent().isEmpty() ? updateEntry.getContent() : isNote.getContent());
+            noteEntryService.saveNote(isNote);
+            return new ResponseEntity<>(isNote, HttpStatus.OK);
         }
-        noteEntryService.saveNote(isNote);
-        return isNote;
+        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 }

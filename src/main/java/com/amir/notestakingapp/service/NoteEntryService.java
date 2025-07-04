@@ -6,7 +6,6 @@ import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -17,10 +16,7 @@ public class NoteEntryService {
     private NoteEntryRepository noteEntryRepository;
 
     public List<NoteEntry> getAllNote(){
-        if(noteEntryRepository.findAll() != null && !noteEntryRepository.findAll().isEmpty()){
-            return noteEntryRepository.findAll();
-        }
-        return new ArrayList<>();
+        return noteEntryRepository.findAll();
     }
 
     public void saveNote(NoteEntry noteEntry){
@@ -31,8 +27,7 @@ public class NoteEntryService {
         return noteEntryRepository.findById(id);
     }
 
-    public boolean deleteById(ObjectId id){
+    public void deleteById(ObjectId id){
         noteEntryRepository.deleteById(id);
-        return true;
     }
 }
