@@ -1,7 +1,9 @@
 package com.amir.notestakingapp.controller;
 
 import com.amir.notestakingapp.entity.NoteEntry;
+import com.amir.notestakingapp.entity.User;
 import com.amir.notestakingapp.service.NoteEntryService;
+import com.amir.notestakingapp.service.UserService;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -19,24 +21,28 @@ public class NoteController {
 
     @Autowired
     private NoteEntryService noteEntryService;
+    @Autowired
+    private UserService userService;
 
-    @GetMapping("/getnote")
-//    public ResponseEntity<?> getAll() ////wildcard
-    //or
-    public ResponseEntity<List<NoteEntry>> getAll(){
-        List<NoteEntry> allNotes = noteEntryService.getAllNote();
+    @GetMapping("/getnote/{userName}")
+    public ResponseEntity<?> getNoteOfUser(@PathVariable String userName){
+        User user = userService.findByUserName(userName);
+        List<NoteEntry> allNotes = user.getNoteEntryList();
         if ((allNotes != null) && !allNotes.isEmpty()){
-            return new ResponseEntity<>(noteEntryService.getAllNote(), HttpStatus.OK);
+            return new ResponseEntity<>(allNotes, HttpStatus.OK);
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    @PostMapping("/postnote")
-    public ResponseEntity<NoteEntry> createEntries(@RequestBody NoteEntry noteEntry){
+    @PostMapping("/postnote/{userName}")
+    public ResponseEntity<?> createEntries(@RequestBody NoteEntry noteEntry, @PathVariable String userName){
         try {
-            noteEntry.setCreatedAt(LocalDateTime.now());
-            noteEntryService.saveNote(noteEntry);
-            return new ResponseEntity<>(noteEntry, HttpStatus.CREATED);
+            User user = userService.findByUserName(userName);
+            if (user != null){
+                noteEntryService.saveNote(noteEntry, userName);
+                return new ResponseEntity<>(noteEntry, HttpStatus.CREATED);
+            }
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
         catch (Exception e){
             return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
@@ -53,18 +59,22 @@ public class NoteController {
     }
 
 
-    @DeleteMapping("/delbyid/{id}")
-    public ResponseEntity<?> deleteById(@PathVariable ObjectId id){
+    @DeleteMapping("/delbyid/{userName}/{id}")
+    public ResponseEntity<?> deleteById(@PathVariable ObjectId id, @PathVariable String userName){
         Optional<NoteEntry> note = noteEntryService.getNoteById(id);
         if (note.isPresent()){
-            noteEntryService.deleteById(id);
+            noteEntryService.deleteById(id, userName);
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    @PutMapping("/update/{id}")
-    public ResponseEntity<NoteEntry> updateEntryById(@PathVariable ObjectId id, @RequestBody NoteEntry updateEntry){
+    @PutMapping("/update/{userName}/{id}")
+    public ResponseEntity<NoteEntry> updateEntryById(
+            @PathVariable ObjectId id,
+            @RequestBody NoteEntry updateEntry,
+            @PathVariable String userName
+    ){
         NoteEntry isNote = noteEntryService.getNoteById(id).orElse(null);
         if (isNote != null){
             isNote.setTitle(!(updateEntry.getTitle() == null) && !updateEntry.getTitle().isEmpty() ? updateEntry.getTitle() : isNote.getTitle());
