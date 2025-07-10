@@ -3,6 +3,7 @@ package com.amir.notestakingapp.controller;
 import com.amir.notestakingapp.entity.User;
 import com.amir.notestakingapp.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -38,13 +39,18 @@ public class UserController {
 //    }
 
     @PutMapping("{userName}")
+    @Transactional
     public User updateUser(@RequestBody User user, @PathVariable String userName){
-        User userInDB = userService.findByUserName(userName);
-        if (userInDB != null){
-            userInDB.setUserName(user.getUserName());
-            userInDB.setPassword(user.getPassword());
+        try {
+            User userInDB = userService.findByUserName(userName);
+            if (userInDB != null){
+                userInDB.setUserName(user.getUserName());
+                userInDB.setPassword(user.getPassword());
+            }
+            userService.save(userInDB);
+            return userInDB;
+        } catch (Exception e) {
+            throw new RuntimeException(e);
         }
-        userService.save(userInDB);
-        return userInDB;
     }
 }

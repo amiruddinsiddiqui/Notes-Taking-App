@@ -62,4 +62,4 @@ DELETE  /note/delbyid/{id}       → Delete a note
 - Enable end-to-end encryption (E2EE)
 - Tag-based filtering and search
 - Swagger/OpenAPI documentation
-- Frontend client (React or mobile)
+- Frontend using Reactjs

@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,6 +26,7 @@ public class NoteEntryService {
         return noteEntryRepository.findAll();
     }
 
+    @Transactional
     public void saveNote(NoteEntry noteEntry, String userName){
         try {
             User user = userService.findByUserName(userName);
@@ -33,15 +35,17 @@ public class NoteEntryService {
             user.getNoteEntryList().add(savedNote);
             userService.save(user);
         } catch (Exception e) {
-            log.error("Exception", e);
+//            log.error("Exception", e);
+            throw new RuntimeException("Exception", e);
         }
     }
 
+    @Transactional
     public void saveNote(NoteEntry noteEntry){
         try {
             noteEntryRepository.save(noteEntry);
         } catch (Exception e) {
-            log.error("Exception", e);
+            throw new RuntimeException("Exception", e);
         }
     }
 
