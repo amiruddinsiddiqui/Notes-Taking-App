@@ -8,10 +8,13 @@ import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 
 @RestController
@@ -20,12 +23,16 @@ public class NoteController {
     //controller ---> service ---> repository
 
     @Autowired
+    private NoteEntry noteEntry;
+    @Autowired
     private NoteEntryService noteEntryService;
     @Autowired
     private UserService userService;
 
-    @GetMapping("/getnote/{userName}")
-    public ResponseEntity<?> getNoteOfUser(@PathVariable String userName){
+    @GetMapping("/get-note")
+    public ResponseEntity<List<NoteEntry>> getNoteOfUser(){
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
         User user = userService.findByUserName(userName);
         List<NoteEntry> allNotes = user.getNoteEntryList();
         if ((allNotes != null) && !allNotes.isEmpty()){
@@ -34,9 +41,11 @@ public class NoteController {
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    @PostMapping("/postnote/{userName}")
-    public ResponseEntity<?> createEntries(@RequestBody NoteEntry noteEntry, @PathVariable String userName){
+    @PostMapping("/postnote")
+    public ResponseEntity<?> createEntries(@RequestBody NoteEntry noteEntry){
         try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userName = authentication.getName();
             User user = userService.findByUserName(userName);
             if (user != null){
                 noteEntryService.saveNote(noteEntry, userName);
@@ -51,36 +60,67 @@ public class NoteController {
 
     @GetMapping("/getbyid/{id}")
     public ResponseEntity<NoteEntry> getbyid(@PathVariable ObjectId id){
-        Optional<NoteEntry> note = noteEntryService.getNoteById(id);
-        if (note.isPresent()){
-            return new ResponseEntity<>(note.get(), HttpStatus.OK);
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userName = authentication.getName();
+            User user = userService.findByUserName(userName);
+            if (user != null){
+                List<NoteEntry> collect = user.getNoteEntryList().stream().filter(x -> x.getId().equals(id)).collect(Collectors.toList());
+                if (!collect.isEmpty()){
+                    Optional<NoteEntry> note = noteEntryService.getNoteById(id);
+                    if (note.isPresent()){
+                        return new ResponseEntity<>(note.get(), HttpStatus.OK);
+                    }
+                }
+            }
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.BAD_GATEWAY);
         }
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
 
-    @DeleteMapping("/delbyid/{userName}/{id}")
-    public ResponseEntity<?> deleteById(@PathVariable ObjectId id, @PathVariable String userName){
-        Optional<NoteEntry> note = noteEntryService.getNoteById(id);
-        if (note.isPresent()){
-            noteEntryService.deleteById(id, userName);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    @DeleteMapping("/delbyid/{id}")
+    public ResponseEntity<?> deleteById(@PathVariable ObjectId id){
+        try {
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            String userName = authentication.getName();
+            User user = userService.findByUserName(userName);
+            List<NoteEntry> collect = user.getNoteEntryList().stream().filter(x -> x.getId().equals(id)).collect(Collectors.toList());
+            if (!collect.isEmpty()){
+                Optional<NoteEntry> note = noteEntryService.getNoteById(id);
+                if (note.isPresent()){
+                    boolean removed = noteEntryService.deleteById(id, userName);
+                    if (removed){
+                        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+                    }
+                }
+            }
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.BAD_REQUEST);
         }
-        return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }
 
-    @PutMapping("/update/{userName}/{id}")
+    @PutMapping("/update/{id}")
     public ResponseEntity<NoteEntry> updateEntryById(
             @PathVariable ObjectId id,
-            @RequestBody NoteEntry updateEntry,
-            @PathVariable String userName
+            @RequestBody NoteEntry updateEntry
     ){
-        NoteEntry isNote = noteEntryService.getNoteById(id).orElse(null);
-        if (isNote != null){
-            isNote.setTitle(!(updateEntry.getTitle() == null) && !updateEntry.getTitle().isEmpty() ? updateEntry.getTitle() : isNote.getTitle());
-            isNote.setContent(!(updateEntry.getContent() == null) && !updateEntry.getContent().isEmpty() ? updateEntry.getContent() : isNote.getContent());
-            noteEntryService.saveNote(isNote);
-            return new ResponseEntity<>(isNote, HttpStatus.OK);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        String userName = authentication.getName();
+        User user = userService.findByUserName(userName);
+
+        List<NoteEntry> collect = user.getNoteEntryList().stream().filter(x -> x.getId().equals(id)).collect(Collectors.toList());
+        if (!collect.isEmpty()){
+            Optional<NoteEntry> note = noteEntryService.getNoteById(id);
+            if (note.isPresent()){
+                NoteEntry old = note.get();
+                old.setTitle(!(updateEntry.getTitle() == null && updateEntry.getTitle().isEmpty()) ? updateEntry.getTitle() : old.getTitle());
+                old.setContent(!(updateEntry.getContent() == null && updateEntry.getContent().isEmpty()) ? updateEntry.getContent() : old.getContent());
+                noteEntryService.saveNote(old);
+                return new ResponseEntity<>(old, HttpStatus.OK);
+            }
         }
         return new ResponseEntity<>(HttpStatus.NOT_FOUND);
     }

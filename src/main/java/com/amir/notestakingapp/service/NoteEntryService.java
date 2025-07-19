@@ -33,9 +33,8 @@ public class NoteEntryService {
             noteEntry.setCreatedAt(LocalDateTime.now());
             NoteEntry savedNote = noteEntryRepository.save(noteEntry);
             user.getNoteEntryList().add(savedNote);
-            userService.save(user);
+            userService.saveUser(user);
         } catch (Exception e) {
-//            log.error("Exception", e);
             throw new RuntimeException("Exception", e);
         }
     }
@@ -53,10 +52,19 @@ public class NoteEntryService {
         return noteEntryRepository.findById(id);
     }
 
-    public void deleteById(ObjectId id, String userName){
-        User user = userService.findByUserName(userName);
-        user.getNoteEntryList().removeIf(x -> x.getId().equals(id));
-        userService.save(user);
-        noteEntryRepository.deleteById(id);
+    @Transactional
+    public boolean deleteById(ObjectId id, String userName){
+        boolean removed = false;
+        try {
+            User user = userService.findByUserName(userName);
+            removed = user.getNoteEntryList().removeIf(x -> x.getId().equals(id));
+            if (removed){
+                userService.saveUser(user);
+                noteEntryRepository.deleteById(id);
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+        return removed;
     }
 }
