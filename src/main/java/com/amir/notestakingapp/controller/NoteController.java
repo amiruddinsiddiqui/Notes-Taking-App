@@ -22,8 +22,8 @@ import java.util.stream.Collectors;
 public class NoteController {
     //controller ---> service ---> repository
 
-    @Autowired
-    private NoteEntry noteEntry;
+//    @Autowired
+//    private NoteEntry noteEntry;
     @Autowired
     private NoteEntryService noteEntryService;
     @Autowired
